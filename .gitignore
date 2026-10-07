@@ -1,0 +1,11 @@
+# Never commit secrets
+.env
+config.js
+*.key
+*credentials*.json
+
+# OS / editor
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
