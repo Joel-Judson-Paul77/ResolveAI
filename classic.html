@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ResolveAI Support</title>
+<style>
+:root{--bg:#f6f7fb;--card:#fff;--ink:#141826;--muted:#5d6475;--line:#e3e6ee;--brand:#3b5bdb;--ok:#2b8a3e;--okbg:#e6f6ea;--warn:#c92a2a;--warnbg:#fdecec;--amber:#b35c00;--amberbg:#fff3e0}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1220;--card:#181c2e;--ink:#e8eaf2;--muted:#9aa1b5;--line:#2a3048;--brand:#7c95ff;--ok:#69db7c;--okbg:#16301f;--warn:#ff8787;--warnbg:#3a1c1f;--amber:#ffc078;--amberbg:#3a2a14}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "Segoe UI",system-ui,sans-serif}
+header{padding:18px 24px;border-bottom:1px solid var(--line);background:var(--card);display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+header h1{margin:0;font-size:20px}header h1 span{color:var(--brand)}
+header p{margin:0;color:var(--muted);font-size:13px}
+.wrap{max-width:1200px;margin:0 auto;padding:20px 16px;display:grid;grid-template-columns:1fr 1.2fr;gap:18px}
+@media(max-width:860px){.wrap{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px}
+.card h2{margin:0 0 12px;font-size:15px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+label{font-size:13px;color:var(--muted);display:block;margin:10px 0 4px}
+input,textarea{width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit}
+textarea{min-height:110px;resize:vertical}
+button{font:inherit;cursor:pointer;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink);padding:8px 12px}
+button.primary{background:var(--brand);border-color:var(--brand);color:#fff;font-weight:600;width:100%;padding:11px;margin-top:12px}
+button:disabled{opacity:.6;cursor:wait}
+.demos{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}.demos button{font-size:13px}
+.mode{display:flex;gap:8px;margin-bottom:6px}.mode button.on{border-color:var(--brand);color:var(--brand);font-weight:600}
+.small{font-size:12px;color:var(--muted)}
+.pipe{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+.step{flex:1;min-width:90px;text-align:center;padding:8px 4px;border-radius:8px;border:1px solid var(--line);font-size:12px;color:var(--muted);transition:.25s}
+.step b{display:block;font-size:13px;color:var(--ink)}
+.step.done{border-color:var(--brand);background:color-mix(in srgb,var(--brand) 12%,transparent)}
+.step.esc{border-color:var(--warn);background:var(--warnbg)}
+.badge{display:inline-block;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600}
+.b-status,.b-refund{background:var(--okbg);color:var(--ok)}.b-escalate{background:var(--warnbg);color:var(--warn)}
+.grid2{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0}
+@media(max-width:520px){.grid2{grid-template-columns:repeat(2,1fr)}}
+.kv{background:var(--bg);border-radius:8px;padding:8px}.kv span{display:block;font-size:11px;color:var(--muted);text-transform:uppercase}
+.reply{background:var(--okbg);border-left:4px solid var(--ok);padding:10px 12px;border-radius:6px;margin-top:10px}
+.esc-box{background:var(--warnbg);border-left:4px solid var(--warn);padding:10px 12px;border-radius:6px;margin-top:10px}
+.empty{color:var(--muted);text-align:center;padding:40px 0}
+.stats{grid-column:1/-1;display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+@media(max-width:700px){.stats{grid-template-columns:repeat(2,1fr)}}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px}
+.stat .n{font-size:26px;font-weight:700}.stat .l{font-size:12px;color:var(--muted)}
+.log{grid-column:1/-1;overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;padding:8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-weight:600}
+.src{font-size:11px;color:var(--amber);background:var(--amberbg);padding:2px 8px;border-radius:999px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Resolve<span>AI</span></h1>
+  <p>Autonomous customer support: ticket in, resolution out, a human only when needed.</p>
+</header>
+
+<div class="wrap">
+  <section class="card">
+    <h2>Customer message</h2>
+    <div class="mode">
+      <button id="mLive" class="on" onclick="setMode('live')">Live (n8n)</button>
+      <button id="mOff" onclick="setMode('offline')">Offline demo</button>
+    </div>
+    <div id="liveBox">
+      <label for="url">n8n webhook URL</label>
+      <input id="url" value="" placeholder="https://your-name.app.n8n.cloud/webhook/support">
+      <div class="small">Paste the Production URL from the n8n Webhook node. It is remembered in this browser.</div>
+    </div>
+    <div id="offBox" class="small" style="display:none">Runs the same decision logic in the browser. Use it as a backup if the internet fails.</div>
+    <label for="email">Customer email</label>
+    <input id="email" value="customer@example.com">
+    <label for="msg">Message</label>
+    <textarea id="msg" placeholder="Type a customer request..."></textarea>
+    <div class="small" style="margin-top:8px">Quick demo tickets:</div>
+    <div class="demos">
+      <button onclick="fill(0)">Order status</button>
+      <button onclick="fill(1)">Damaged item refund</button>
+      <button onclick="fill(2)">Angry customer</button>
+      <button onclick="fill(3)">Big refund</button>
+    </div>
+    <button class="primary" id="send" onclick="send()">Send to ResolveAI</button>
+  </section>
+
+  <section class="card">
+    <h2>AI pipeline</h2>
+    <div class="pipe">
+      <div class="step" id="s1"><b>1 Understand</b>AI intent &amp; mood</div>
+      <div class="step" id="s2"><b>2 Investigate</b>Order lookup</div>
+      <div class="step" id="s3"><b>3 Decide</b>Rules + confidence</div>
+      <div class="step" id="s4"><b>4 Act</b>Resolve / escalate</div>
+    </div>
+    <div id="result"><div class="empty">Send a ticket to see the AI work.</div></div>
+  </section>
+
+  <div class="stats">
+    <div class="stat"><div class="n" id="tTotal">0</div><div class="l">Tickets handled</div></div>
+    <div class="stat"><div class="n" id="tAuto">0%</div><div class="l">Resolved automatically</div></div>
+    <div class="stat"><div class="n" id="tEsc">0</div><div class="l">Escalated to humans</div></div>
+    <div class="stat"><div class="n" id="tTime">-</div><div class="l">Avg. response time</div></div>
+  </div>
+
+  <section class="card log">
+    <h2>Ticket log</h2>
+    <table><thead><tr><th>Ticket</th><th>Message</th><th>Intent</th><th>Mood</th><th>Outcome</th><th>Time</th></tr></thead>
+    <tbody id="logBody"><tr><td colspan="6" class="small">No tickets yet.</td></tr></tbody></table>
+  </section>
+</div>
+
+<script src="config.js"></script>
+<script>
+// ===== ResolveAI core logic: Understand -> Investigate -> Decide =====
+const ORDERS = {
+  "1021": { customer: "Ravi Kumar",   item: "Bluetooth Headphones", amount: 1499, status: "Delivered", date: "2026-10-02" },
+  "1022": { customer: "Anjali Reddy", item: "Phone Case",           amount: 299,  status: "Delivered", date: "2026-10-03" },
+  "1023": { customer: "Sai Teja",     item: "Smart Watch",          amount: 2999, status: "Shipped - arriving 9 Oct", date: "2026-10-04" },
+  "1024": { customer: "Meena Devi",   item: "USB-C Cable",          amount: 249,  status: "Delivered", date: "2026-10-01" },
+  "1025": { customer: "Kiran Babu",   item: "Laptop Stand",         amount: 899,  status: "Delayed - courier issue", date: "2026-09-28" },
+  "1026": { customer: "Lakshmi P",    item: "Water Bottle",         amount: 399,  status: "Processing", date: "2026-10-06" }
+};
+const REFUND_LIMIT = 500;   // AI may auto-approve refunds up to this amount
+const MIN_CONFIDENCE = 0.7;
+
+function ruleClassify(msg) {
+  const m = msg.toLowerCase();
+  const idMatch = msg.match(/(\d{4})/);
+  let intent = "other";
+  if (/(refund|money back|return|damaged|broken|defective)/.test(m)) intent = "refund";
+  else if (/(where|status|track|when will|deliver|arrive)/.test(m)) intent = "status";
+  else if (/(complain|worst|bad service|cheat)/.test(m)) intent = "complaint";
+  const angry = /(worst|angry|ridiculous|useless|terrible|cheat|fraud|never again|!!)/.test(m) || (msg.replace(/[^A-Z]/g, "").length > 15);
+  return {
+    intent, order_id: idMatch ? idMatch[1] : null,
+    sentiment: angry ? "angry" : "calm",
+    urgency: angry ? "high" : "low",
+    confidence: intent === "other" ? 0.4 : 0.85,
+    summary: msg.slice(0, 140)
+  };
+}
+
+function decide(message, ai) {
+  const oid = ai.order_id ? String(ai.order_id).replace(/\D/g, "") : null;
+  const order = oid ? ORDERS[oid] : null;
+  let route = "escalate", reply = "", action = "", reason = "";
+
+  if (ai.sentiment === "angry" || ai.urgency === "high") reason = "Angry / urgent customer - needs human care";
+  else if ((ai.confidence ?? 0) < MIN_CONFIDENCE) reason = "Low AI confidence";
+  else if (!order) reason = oid ? "Order #" + oid + " not found" : "No order ID provided";
+  else if (ai.intent === "status") {
+    route = "status"; action = "Auto-replied with live order status";
+    reply = "Hi " + order.customer + ", your order #" + oid + " (" + order.item + ") is: " + order.status + ".";
+  } else if (ai.intent === "refund") {
+    if (order.amount <= REFUND_LIMIT && order.status === "Delivered") {
+      route = "refund"; action = "Refund of Rs." + order.amount + " auto-approved (within Rs." + REFUND_LIMIT + " limit)";
+      reply = "Hi " + order.customer + ", sorry about your " + order.item + ". A refund of Rs." + order.amount + " for order #" + oid + " is approved and will reach you in 3-5 days.";
+    } else reason = "Refund Rs." + order.amount + " exceeds auto-approval limit or item not delivered";
+  } else reason = "Intent '" + ai.intent + "' needs a human";
+
+  if (route === "escalate") {
+    action = "Escalated to human agent";
+    reply = "Thanks for reaching out. Your request has been prioritised and a support specialist will contact you shortly.";
+  }
+  return {
+    ticket_id: "TKT-" + Date.now().toString().slice(-6),
+    route, intent: ai.intent, sentiment: ai.sentiment, urgency: ai.urgency, confidence: ai.confidence,
+    order_id: oid, order: order || null, reply, action,
+    escalation: route === "escalate" ? {
+      reason, summary: ai.summary,
+      suggested_reply: order ? "Apologise, confirm order #" + oid + " (" + order.item + ", " + order.status + "), offer a resolution." : "Apologise and ask for the order ID."
+    } : null,
+    ai_source: ai.source
+  };
+}
+
+
+const DEMOS = [
+  "Hi, where is my order #1023? When will it arrive?",
+  "My order #1022 phone case arrived damaged. I want a refund please.",
+  "This is the WORST service ever!! Order #1025 is late again and nobody answers. Absolutely ridiculous!!",
+  "Please refund order #1021, the headphones stopped working."
+];
+let mode = "live", log = [];
+const $ = id => document.getElementById(id);
+try { $("url").value = localStorage.getItem("resolveai_url") || window.RESOLVEAI_WEBHOOK || $("url").value; } catch (e) {}
+
+function fill(i){ $("msg").value = DEMOS[i]; }
+function setMode(m){
+  mode = m;
+  $("mLive").classList.toggle("on", m === "live"); $("mOff").classList.toggle("on", m === "offline");
+  $("liveBox").style.display = m === "live" ? "" : "none"; $("offBox").style.display = m === "offline" ? "" : "none";
+}
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+async function callLive(url, payload){
+  try {
+    const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    return await r.json();
+  } catch (e) {
+    // Retry as a "simple" request in case the browser blocked the CORS preflight
+    const r = await fetch(url, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify(payload) });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    return await r.json();
+  }
+}
+
+async function send(){
+  const message = $("msg").value.trim(); if (!message) { $("msg").focus(); return; }
+  const payload = { message, email: $("email").value.trim() };
+  ["s1","s2","s3","s4"].forEach(s => $(s).className = "step");
+  $("send").disabled = true; $("send").textContent = "AI is working...";
+  $("result").innerHTML = '<div class="empty">Processing ticket...</div>';
+  const t0 = performance.now(); let res, note = "";
+  try {
+    if (mode === "live") {
+      const url = $("url").value.trim();
+      if (!url) throw new Error("No webhook URL");
+      try { localStorage.setItem("resolveai_url", url); } catch (e) {}
+      res = await callLive(url, payload);
+      if (Array.isArray(res)) res = res[0];
+    } else throw new Error("offline");
+  } catch (e) {
+    if (mode === "live") note = "Live call failed (" + esc(e.message) + "), so this used offline mode.";
+    const ai = ruleClassify(message); ai.source = "Offline rules (browser)";
+    res = decide(message, ai); res.customer_message = message;
+  }
+  const ms = Math.round(performance.now() - t0);
+  for (const s of ["s1","s2","s3"]) { $(s).classList.add("done"); await sleep(250); }
+  $("s4").classList.add(res.route === "escalate" ? "esc" : "done");
+  render(res, ms, note);
+  log.unshift({ ...res, ms, message }); renderLog();
+  $("send").disabled = false; $("send").textContent = "Send to ResolveAI";
+}
+
+function render(r, ms, note){
+  const label = { status: "Auto-resolved: status", refund: "Auto-resolved: refund", escalate: "Escalated to human" }[r.route] || r.route;
+  let html = '<span class="badge b-' + esc(r.route) + '">' + esc(label) + '</span> <span class="src">' + esc(r.ai_source) + '</span>';
+  if (note) html += '<div class="small" style="margin-top:6px">' + note + '</div>';
+  html += '<div class="grid2">'
+    + '<div class="kv"><span>Intent</span>' + esc(r.intent) + '</div>'
+    + '<div class="kv"><span>Sentiment</span>' + esc(r.sentiment) + '</div>'
+    + '<div class="kv"><span>Urgency</span>' + esc(r.urgency) + '</div>'
+    + '<div class="kv"><span>Confidence</span>' + esc(r.confidence) + '</div></div>';
+  html += r.order
+    ? '<div class="small"><b>Order #' + esc(r.order_id) + ':</b> ' + esc(r.order.item) + ', Rs.' + esc(r.order.amount) + ', ' + esc(r.order.status) + ', ' + esc(r.order.customer) + '</div>'
+    : '<div class="small"><b>Order:</b> not found</div>';
+  html += '<div class="small" style="margin-top:6px"><b>Action:</b> ' + esc(r.action) + ' (' + ms + ' ms)</div>';
+  html += '<div class="reply"><b>Reply to customer:</b><br>' + esc(r.reply) + '</div>';
+  if (r.escalation) html += '<div class="esc-box"><b>Handoff to human agent</b><br><b>Why:</b> ' + esc(r.escalation.reason)
+    + '<br><b>AI summary:</b> ' + esc(r.escalation.summary) + '<br><b>Suggested reply:</b> ' + esc(r.escalation.suggested_reply) + '</div>';
+  $("result").innerHTML = html;
+}
+
+function renderLog(){
+  const auto = log.filter(t => t.route !== "escalate").length;
+  $("tTotal").textContent = log.length;
+  $("tAuto").textContent = Math.round(auto / log.length * 100) + "%";
+  $("tEsc").textContent = log.length - auto;
+  $("tTime").textContent = (log.reduce((a, t) => a + t.ms, 0) / log.length / 1000).toFixed(1) + " s";
+  $("logBody").innerHTML = log.map(t => '<tr><td>' + esc(t.ticket_id) + '</td><td>' + esc(t.message.slice(0, 60)) + '</td><td>' + esc(t.intent)
+    + '</td><td>' + esc(t.sentiment) + '</td><td><span class="badge b-' + esc(t.route) + '">' + esc(t.route) + '</span></td><td>' + t.ms + ' ms</td></tr>').join("");
+}
+</script>
+</body>
+</html>

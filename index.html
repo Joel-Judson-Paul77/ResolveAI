@@ -1,0 +1,471 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ResolveAI Console</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#07080d; --bg2:#0c0e16; --panel:rgba(20,23,36,.72); --panel-solid:#141724; --line:rgba(255,255,255,.07); --line2:rgba(255,255,255,.12);
+  --ink:#eef0f7; --muted:#8b91a7; --dim:#5d6378;
+  --brand:#7c6cff; --brand2:#22d3ee; --grad:linear-gradient(135deg,#7c6cff 0%,#22d3ee 100%);
+  --ok:#34d399; --ok-bg:rgba(52,211,153,.1); --warn:#fb7185; --warn-bg:rgba(251,113,133,.1); --amber:#fbbf24; --amber-bg:rgba(251,191,36,.1);
+  --r:16px; --shadow:0 20px 60px -20px rgba(0,0,0,.6);
+}
+*{box-sizing:border-box;margin:0}
+html,body{background:var(--bg)}
+body{color:var(--ink);font:14px/1.55 Inter,"Segoe UI",system-ui,sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh;overflow-x:hidden}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:radial-gradient(900px 500px at 12% -10%,rgba(124,108,255,.22),transparent 60%),radial-gradient(800px 500px at 100% 0%,rgba(34,211,238,.14),transparent 60%),radial-gradient(700px 600px at 50% 120%,rgba(124,108,255,.10),transparent 60%)}
+body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.35;
+  background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);background-size:48px 48px;mask-image:radial-gradient(ellipse at top,#000 20%,transparent 70%)}
+.app{position:relative;z-index:1;max-width:1440px;margin:0 auto;padding:0 24px 40px}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
+.mono{font-family:"JetBrains Mono",Consolas,monospace}
+
+/* NAV */
+nav{display:flex;align-items:center;gap:16px;padding:18px 0;border-bottom:1px solid var(--line)}
+.logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:18px;letter-spacing:-.02em}
+.mark{width:32px;height:32px;border-radius:9px;background:var(--grad);display:grid;place-items:center;box-shadow:0 0 24px rgba(124,108,255,.5)}
+.mark svg{width:18px;height:18px}
+.logo small{font-weight:500;color:var(--muted);font-size:12px;margin-left:4px;padding:2px 8px;border:1px solid var(--line2);border-radius:999px}
+.spacer{flex:1}
+.pill{display:inline-flex;align-items:center;gap:8px;padding:6px 12px;border-radius:999px;border:1px solid var(--line2);background:var(--panel);font-size:12px;font-weight:500;color:var(--muted);backdrop-filter:blur(12px)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 0 rgba(52,211,153,.6);animation:pulse 2s infinite}
+.dot.off{background:var(--amber);animation:none}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(52,211,153,.5)}70%{box-shadow:0 0 0 8px rgba(52,211,153,0)}100%{box-shadow:0 0 0 0 rgba(52,211,153,0)}}
+.iconbtn{width:36px;height:36px;border-radius:10px;border:1px solid var(--line2);background:var(--panel);display:grid;place-items:center;color:var(--muted);transition:.2s}
+.iconbtn:hover{color:var(--ink);border-color:var(--brand)}
+
+/* HERO */
+.hero{display:grid;grid-template-columns:1.1fr 1fr;gap:32px;align-items:end;padding:36px 0 28px}
+.eyebrow{display:inline-flex;gap:8px;align-items:center;font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--brand2)}
+h1{font-size:44px;line-height:1.08;letter-spacing:-.035em;font-weight:800;margin:12px 0 12px}
+h1 .g{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.lede{color:var(--muted);font-size:16px;max-width:560px}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px;backdrop-filter:blur(12px)}
+.kpi .v{font-size:26px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.kpi .l{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:2px}
+.kpi .v.ok{color:var(--ok)}.kpi .v.warn{color:var(--warn)}
+
+/* GRID */
+.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr) minmax(0,.9fr);gap:16px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);backdrop-filter:blur(16px);box-shadow:var(--shadow);display:flex;flex-direction:column;min-height:0}
+.card-h{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--line)}
+.card-h h3{font-size:13px;font-weight:600;letter-spacing:.01em}
+.card-h .sub{color:var(--dim);font-size:12px;margin-left:auto}
+.tag{font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px;border:1px solid var(--line2);color:var(--muted)}
+
+/* CHAT */
+.chat{flex:1;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:12px;height:440px;scroll-behavior:smooth}
+.msg{max-width:88%;padding:10px 14px;border-radius:14px;font-size:13.5px;animation:rise .35s ease both}
+.msg.me{align-self:flex-end;background:var(--grad);color:#fff;border-bottom-right-radius:4px}
+.msg.bot{align-self:flex-start;background:var(--panel-solid);border:1px solid var(--line2);border-bottom-left-radius:4px}
+.msg.bot .who{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:var(--brand2);margin-bottom:4px}
+.msg.sys{align-self:center;font-size:11.5px;color:var(--muted);background:transparent;padding:2px 0}
+.typing{display:inline-flex;gap:4px;padding:4px 0}.typing i{width:6px;height:6px;border-radius:50%;background:var(--muted);animation:blink 1.2s infinite}
+.typing i:nth-child(2){animation-delay:.2s}.typing i:nth-child(3){animation-delay:.4s}
+@keyframes blink{0%,80%,100%{opacity:.25}40%{opacity:1}}
+@keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.empty-chat{margin:auto;text-align:center;color:var(--dim);font-size:13px}
+.empty-chat b{display:block;color:var(--muted);font-size:14px;margin-bottom:4px}
+.quick{display:flex;gap:6px;flex-wrap:wrap;padding:0 18px 10px}
+.chip{font-size:12px;padding:6px 11px;border-radius:999px;border:1px solid var(--line2);color:var(--muted);transition:.2s;background:rgba(255,255,255,.02)}
+.chip:hover{color:var(--ink);border-color:var(--brand);background:rgba(124,108,255,.1)}
+.composer{display:flex;gap:8px;padding:12px;border-top:1px solid var(--line)}
+.composer textarea{flex:1;resize:none;height:46px;background:var(--bg2);border:1px solid var(--line2);border-radius:12px;color:var(--ink);font:inherit;padding:12px 14px;outline:none;transition:.2s}
+.composer textarea:focus{border-color:var(--brand);box-shadow:0 0 0 3px rgba(124,108,255,.18)}
+.send{width:46px;border-radius:12px;background:var(--grad);display:grid;place-items:center;box-shadow:0 8px 24px -8px rgba(124,108,255,.8);transition:.2s}
+.send:hover{transform:translateY(-1px)}.send:disabled{opacity:.5;cursor:wait;transform:none}
+
+/* PIPELINE */
+.pipe{padding:18px;display:flex;flex-direction:column;gap:0;flex:1}
+.stage{display:grid;grid-template-columns:36px 1fr;gap:14px;position:relative;padding-bottom:16px}
+.stage:not(:last-child)::before{content:"";position:absolute;left:17px;top:38px;bottom:0;width:2px;background:var(--line2);border-radius:2px}
+.stage.done:not(:last-child)::before{background:var(--grad)}
+.node{width:36px;height:36px;border-radius:11px;border:1px solid var(--line2);background:var(--bg2);display:grid;place-items:center;color:var(--dim);transition:.35s;position:relative;z-index:1}
+.node svg{width:17px;height:17px}
+.stage.run .node{border-color:var(--brand);color:var(--brand);box-shadow:0 0 0 4px rgba(124,108,255,.15)}
+.stage.run .node::after{content:"";position:absolute;inset:-4px;border-radius:14px;border:2px solid transparent;border-top-color:var(--brand2);animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.stage.done .node{background:var(--grad);border-color:transparent;color:#fff}
+.stage.done.esc .node{background:var(--warn);}
+.stage .t{font-weight:600;font-size:13.5px;display:flex;align-items:center;gap:8px;min-height:36px}
+.stage .t .s{font-weight:400;color:var(--dim);font-size:12px}
+.stage .body{color:var(--muted);font-size:12.5px;margin-top:-2px;min-height:6px}
+.stage .body:empty{display:none}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.kv{font-size:11.5px;padding:4px 9px;border-radius:8px;background:rgba(255,255,255,.04);border:1px solid var(--line)}
+.kv b{color:var(--ink);font-weight:600}
+.conf{height:5px;border-radius:5px;background:rgba(255,255,255,.06);overflow:hidden;margin-top:8px;max-width:220px}
+.conf i{display:block;height:100%;background:var(--grad);width:0;transition:width .8s ease}
+.order{margin-top:6px;display:grid;grid-template-columns:1fr auto;gap:2px 12px;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.03);border:1px solid var(--line)}
+.order .n{font-weight:600;color:var(--ink)}.order .a{text-align:right;font-weight:600;color:var(--ink)}
+.outcome{margin-top:8px;padding:12px 14px;border-radius:12px;font-size:13px;color:var(--ink)}
+.outcome.ok{background:var(--ok-bg);border:1px solid rgba(52,211,153,.3)}
+.outcome.warn{background:var(--warn-bg);border:1px solid rgba(251,113,133,.3)}
+.outcome .h{font-weight:700;font-size:12px;letter-spacing:.04em;text-transform:uppercase;margin-bottom:4px}
+.outcome.ok .h{color:var(--ok)}.outcome.warn .h{color:var(--warn)}
+.src{font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px}
+.src.ai{background:rgba(124,108,255,.15);color:#b4abff}.src.fb{background:var(--amber-bg);color:var(--amber)}
+.idle{margin:auto;text-align:center;color:var(--dim);padding:40px 10px}
+.idle svg{width:44px;height:44px;opacity:.5;margin-bottom:8px}
+
+/* QUEUE */
+.queue{padding:14px;display:flex;flex-direction:column;gap:10px;overflow-y:auto;height:520px}
+.qi{border:1px solid var(--line);border-radius:12px;padding:12px;background:rgba(255,255,255,.02);animation:rise .35s ease both}
+.qi .top{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.qi .id{font-size:11px;color:var(--dim)}
+.prio{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:6px;letter-spacing:.04em}
+.prio.high{background:var(--warn-bg);color:var(--warn)}.prio.low{background:var(--amber-bg);color:var(--amber)}
+.qi .sum{font-size:12.5px;color:var(--ink)}
+.qi .why{font-size:11.5px;color:var(--muted);margin-top:6px}
+.qi .sug{font-size:11.5px;color:var(--muted);margin-top:6px;padding-top:6px;border-top:1px dashed var(--line2)}
+.qi .sug b{color:var(--brand2);font-weight:600}
+.qempty{margin:auto;text-align:center;color:var(--dim);font-size:12.5px}
+
+/* LOG */
+.lower{display:grid;grid-template-columns:1fr;gap:16px;margin-top:16px}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);font-weight:600;padding:10px 18px;border-bottom:1px solid var(--line)}
+td{padding:11px 18px;border-bottom:1px solid var(--line);color:var(--muted);vertical-align:top}
+td.m{color:var(--ink);max-width:380px}
+tr:last-child td{border-bottom:0}
+.badge{font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px;white-space:nowrap}
+.badge.status,.badge.refund{background:var(--ok-bg);color:var(--ok)}.badge.escalate{background:var(--warn-bg);color:var(--warn)}
+.tablewrap{overflow-x:auto}
+
+/* SETTINGS */
+.drawer{position:fixed;top:72px;right:24px;width:360px;max-width:calc(100vw - 32px);background:var(--panel-solid);border:1px solid var(--line2);border-radius:var(--r);box-shadow:var(--shadow);padding:18px;z-index:10;display:none}
+.drawer.open{display:block;animation:rise .25s ease}
+.drawer h4{font-size:13px;margin-bottom:12px}
+.drawer label{font-size:11.5px;color:var(--muted);display:block;margin:12px 0 6px}
+.drawer input{width:100%;background:var(--bg2);border:1px solid var(--line2);border-radius:10px;color:var(--ink);padding:10px 12px;font:12px "JetBrains Mono",monospace;outline:none}
+.seg{display:grid;grid-template-columns:1fr 1fr;background:var(--bg2);border:1px solid var(--line2);border-radius:10px;padding:3px}
+.seg button{padding:8px;border-radius:8px;font-size:12.5px;color:var(--muted);font-weight:500}
+.seg button.on{background:var(--grad);color:#fff}
+.drawer .note{font-size:11.5px;color:var(--dim);margin-top:10px}
+.btn-ghost{margin-top:14px;width:100%;padding:9px;border-radius:10px;border:1px solid var(--line2);color:var(--muted);font-size:12.5px}
+.btn-ghost:hover{color:var(--ink);border-color:var(--warn)}
+
+footer{display:flex;gap:16px;justify-content:space-between;flex-wrap:wrap;color:var(--dim);font-size:12px;padding-top:24px;margin-top:24px;border-top:1px solid var(--line)}
+footer .stack{display:flex;gap:8px;flex-wrap:wrap}
+
+@media (max-width:1180px){.grid{grid-template-columns:1fr 1fr}.grid .qcard{grid-column:1/-1}.queue{height:auto;max-height:420px}}
+@media (max-width:900px){.hero{grid-template-columns:1fr}h1{font-size:34px}}
+@media (max-width:760px){.app{padding:0 16px 32px}.grid{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(2,1fr)}.chat{height:360px}.logo small{display:none}}
+</style>
+</head>
+<body>
+<div class="app">
+  <nav>
+    <div class="logo">
+      <div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"/></svg></div>
+      ResolveAI <small>Support Console</small>
+    </div>
+    <div class="spacer"></div>
+    <span class="pill"><span class="dot" id="statusDot"></span><span id="statusText">Live · n8n + Gemini</span></span>
+    <button class="iconbtn" id="gear" title="Settings" aria-label="Settings">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </button>
+  </nav>
+
+  <div class="drawer" id="drawer">
+    <h4>Connection settings</h4>
+    <label>Mode</label>
+    <div class="seg"><button id="mLive" class="on">Live (n8n)</button><button id="mOff">Offline demo</button></div>
+    <label for="url">n8n webhook URL</label>
+    <input id="url" value="" placeholder="https://your-instance.app.n8n.cloud/webhook/support" spellcheck="false">
+    <label for="email">Customer email</label>
+    <input id="email" value="customer@example.com" spellcheck="false">
+    <div class="note">Offline mode runs the same decision engine in the browser, a backup if the network fails.</div>
+    <button class="btn-ghost" id="reset">Reset session data</button>
+  </div>
+
+  <section class="hero">
+    <div>
+      <div class="eyebrow">● Autonomous customer support</div>
+      <h1>Support that <span class="g">resolves itself.</span></h1>
+      <p class="lede">Every ticket is understood by AI, verified against live order data, and resolved in seconds. Humans step in only when it truly matters.</p>
+    </div>
+    <div class="kpis">
+      <div class="kpi"><div class="v" id="kTotal">0</div><div class="l">Tickets</div></div>
+      <div class="kpi"><div class="v ok" id="kAuto">0%</div><div class="l">Auto-resolved</div></div>
+      <div class="kpi"><div class="v" id="kTime">–</div><div class="l">Avg response</div></div>
+      <div class="kpi"><div class="v warn" id="kEsc">0</div><div class="l">Escalated</div></div>
+    </div>
+  </section>
+
+  <section class="grid">
+    <!-- CUSTOMER CHANNEL -->
+    <div class="card">
+      <div class="card-h"><h3>Customer channel</h3><span class="sub">Web chat</span></div>
+      <div class="chat" id="chat">
+        <div class="empty-chat" id="emptyChat"><b>No conversations yet</b>Pick a scenario below or type a message.</div>
+      </div>
+      <div class="quick">
+        <button class="chip" data-demo="0">📦 Order status</button>
+        <button class="chip" data-demo="1">💸 Damaged item refund</button>
+        <button class="chip" data-demo="2">😡 Angry customer</button>
+        <button class="chip" data-demo="3">💰 High-value refund</button>
+      </div>
+      <div class="composer">
+        <textarea id="msg" placeholder="Type a customer message…" aria-label="Customer message"></textarea>
+        <button class="send" id="send" aria-label="Send">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- PIPELINE -->
+    <div class="card">
+      <div class="card-h"><h3>AI resolution pipeline</h3><span class="sub" id="pipeMeta">Waiting for a ticket</span></div>
+      <div class="pipe" id="pipe">
+        <div class="stage" id="st1">
+          <div class="node"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"/><path d="M9 21h6"/></svg></div>
+          <div><div class="t">Understand <span class="s">AI reads intent, mood &amp; urgency</span></div><div class="body" id="b1"></div></div>
+        </div>
+        <div class="stage" id="st2">
+          <div class="node"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></div>
+          <div><div class="t">Investigate <span class="s">Verify against order system</span></div><div class="body" id="b2"></div></div>
+        </div>
+        <div class="stage" id="st3">
+          <div class="node"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v12"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg></div>
+          <div><div class="t">Decide <span class="s">Business rules + confidence</span></div><div class="body" id="b3"></div></div>
+        </div>
+        <div class="stage" id="st4">
+          <div class="node"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div>
+          <div><div class="t">Act <span class="s">Resolve or hand off to a human</span></div><div class="body" id="b4"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AGENT DESK -->
+    <div class="card qcard">
+      <div class="card-h"><h3>Human agent desk</h3><span class="tag" id="qCount">0 waiting</span></div>
+      <div class="queue" id="queue">
+        <div class="qempty" id="qEmpty">No escalations.<br>The AI is handling everything.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="lower">
+    <div class="card">
+      <div class="card-h"><h3>Ticket log</h3><span class="sub">Audit trail of every AI decision</span></div>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Ticket</th><th>Customer message</th><th>Intent</th><th>Mood</th><th>Engine</th><th>Outcome</th><th>Time</th></tr></thead>
+          <tbody id="logBody"><tr><td colspan="7" style="text-align:center;color:var(--dim)">No tickets yet</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <span>ResolveAI · Legacy to Modern Challenge · TechTatva 2K26</span>
+    <span class="stack"><span class="tag">n8n</span><span class="tag">Gemini</span><span class="tag">Webhook API</span><span class="tag">Rule-based fallback</span></span>
+  </footer>
+</div>
+
+<script src="config.js"></script>
+<script>
+// ===== ResolveAI core logic: Understand -> Investigate -> Decide =====
+const ORDERS = {
+  "1021": { customer: "Ravi Kumar",   item: "Bluetooth Headphones", amount: 1499, status: "Delivered", date: "2026-10-02" },
+  "1022": { customer: "Anjali Reddy", item: "Phone Case",           amount: 299,  status: "Delivered", date: "2026-10-03" },
+  "1023": { customer: "Sai Teja",     item: "Smart Watch",          amount: 2999, status: "Shipped - arriving 9 Oct", date: "2026-10-04" },
+  "1024": { customer: "Meena Devi",   item: "USB-C Cable",          amount: 249,  status: "Delivered", date: "2026-10-01" },
+  "1025": { customer: "Kiran Babu",   item: "Laptop Stand",         amount: 899,  status: "Delayed - courier issue", date: "2026-09-28" },
+  "1026": { customer: "Lakshmi P",    item: "Water Bottle",         amount: 399,  status: "Processing", date: "2026-10-06" }
+};
+const REFUND_LIMIT = 500;   // AI may auto-approve refunds up to this amount
+const MIN_CONFIDENCE = 0.7;
+
+function ruleClassify(msg) {
+  const m = msg.toLowerCase();
+  const idMatch = msg.match(/(\d{4})/);
+  let intent = "other";
+  if (/(refund|money back|return|damaged|broken|defective)/.test(m)) intent = "refund";
+  else if (/(where|status|track|when will|deliver|arrive)/.test(m)) intent = "status";
+  else if (/(complain|worst|bad service|cheat)/.test(m)) intent = "complaint";
+  const angry = /(worst|angry|ridiculous|useless|terrible|cheat|fraud|never again|!!)/.test(m) || (msg.replace(/[^A-Z]/g, "").length > 15);
+  return {
+    intent, order_id: idMatch ? idMatch[1] : null,
+    sentiment: angry ? "angry" : "calm",
+    urgency: angry ? "high" : "low",
+    confidence: intent === "other" ? 0.4 : 0.85,
+    summary: msg.slice(0, 140)
+  };
+}
+
+function decide(message, ai) {
+  const oid = ai.order_id ? String(ai.order_id).replace(/\D/g, "") : null;
+  const order = oid ? ORDERS[oid] : null;
+  let route = "escalate", reply = "", action = "", reason = "";
+
+  if (ai.sentiment === "angry" || ai.urgency === "high") reason = "Angry / urgent customer - needs human care";
+  else if ((ai.confidence ?? 0) < MIN_CONFIDENCE) reason = "Low AI confidence";
+  else if (!order) reason = oid ? "Order #" + oid + " not found" : "No order ID provided";
+  else if (ai.intent === "status") {
+    route = "status"; action = "Auto-replied with live order status";
+    reply = "Hi " + order.customer + ", your order #" + oid + " (" + order.item + ") is: " + order.status + ".";
+  } else if (ai.intent === "refund") {
+    if (order.amount <= REFUND_LIMIT && order.status === "Delivered") {
+      route = "refund"; action = "Refund of Rs." + order.amount + " auto-approved (within Rs." + REFUND_LIMIT + " limit)";
+      reply = "Hi " + order.customer + ", sorry about your " + order.item + ". A refund of Rs." + order.amount + " for order #" + oid + " is approved and will reach you in 3-5 days.";
+    } else reason = "Refund Rs." + order.amount + " exceeds auto-approval limit or item not delivered";
+  } else reason = "Intent '" + ai.intent + "' needs a human";
+
+  if (route === "escalate") {
+    action = "Escalated to human agent";
+    reply = "Thanks for reaching out. Your request has been prioritised and a support specialist will contact you shortly.";
+  }
+  return {
+    ticket_id: "TKT-" + Date.now().toString().slice(-6),
+    route, intent: ai.intent, sentiment: ai.sentiment, urgency: ai.urgency, confidence: ai.confidence,
+    order_id: oid, order: order || null, reply, action,
+    escalation: route === "escalate" ? {
+      reason, summary: ai.summary,
+      suggested_reply: order ? "Apologise, confirm order #" + oid + " (" + order.item + ", " + order.status + "), offer a resolution." : "Apologise and ask for the order ID."
+    } : null,
+    ai_source: ai.source
+  };
+}
+
+
+const DEMOS = [
+  "Hi, where is my order #1023? When will it arrive?",
+  "My order #1022 phone case arrived damaged. I want a refund please.",
+  "This is the WORST service ever!! Order #1025 is late again and nobody answers. Absolutely ridiculous!!",
+  "Please refund order #1021, the headphones stopped working."
+];
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+let mode = "live", log = [], busy = false;
+
+if (window.RESOLVEAI_WEBHOOK) $("url").value = window.RESOLVEAI_WEBHOOK;
+try { const u = localStorage.getItem("resolveai_url"); if (u) $("url").value = u; } catch (e) {}
+
+/* settings drawer */
+$("gear").onclick = e => { e.stopPropagation(); $("drawer").classList.toggle("open"); };
+document.addEventListener("click", e => { if (!$("drawer").contains(e.target)) $("drawer").classList.remove("open"); });
+$("mLive").onclick = () => setMode("live");
+$("mOff").onclick = () => setMode("offline");
+$("url").onchange = () => { try { localStorage.setItem("resolveai_url", $("url").value.trim()); } catch (e) {} };
+$("reset").onclick = () => location.reload();
+function setMode(m){
+  mode = m;
+  $("mLive").classList.toggle("on", m === "live"); $("mOff").classList.toggle("on", m === "offline");
+  $("statusDot").classList.toggle("off", m === "offline");
+  $("statusText").textContent = m === "live" ? "Live · n8n + Gemini" : "Offline demo mode";
+}
+
+/* chat */
+document.querySelectorAll("[data-demo]").forEach(b => b.onclick = () => { $("msg").value = DEMOS[+b.dataset.demo]; send(); });
+$("send").onclick = () => send();
+$("msg").addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } });
+
+function bubble(cls, html){
+  $("emptyChat")?.remove();
+  const d = document.createElement("div"); d.className = "msg " + cls; d.innerHTML = html;
+  $("chat").appendChild(d); $("chat").scrollTop = $("chat").scrollHeight; return d;
+}
+
+async function callLive(url, payload){
+  const opts = ct => ({ method: "POST", headers: { "Content-Type": ct }, body: JSON.stringify(payload) });
+  let r;
+  try { r = await fetch(url, opts("application/json")); }
+  catch (e) { r = await fetch(url, opts("text/plain")); } // simple request fallback if CORS preflight is blocked
+  if (!r.ok) throw new Error("HTTP " + r.status);
+  const j = await r.json(); return Array.isArray(j) ? j[0] : j;
+}
+
+function resetPipe(){
+  for (let i = 1; i <= 4; i++) { $("st" + i).className = "stage"; $("b" + i).innerHTML = ""; }
+}
+
+async function send(){
+  const message = $("msg").value.trim();
+  if (!message || busy) { if (!message) $("msg").focus(); return; }
+  busy = true; $("send").disabled = true; $("msg").value = "";
+  bubble("me", esc(message));
+  const typing = bubble("bot", '<div class="who">ResolveAI</div><span class="typing"><i></i><i></i><i></i></span>');
+  resetPipe(); $("st1").classList.add("run"); $("pipeMeta").textContent = "Processing…";
+
+  const t0 = performance.now(); let res, note = "";
+  try {
+    if (mode !== "live") throw new Error("offline");
+    res = await callLive($("url").value.trim(), { message, email: $("email").value.trim() });
+  } catch (e) {
+    if (mode === "live") note = "Live service unreachable, so this was answered by the offline engine.";
+    const ai = ruleClassify(message); ai.source = "Offline engine";
+    res = decide(message, ai);
+  }
+  const ms = Math.round(performance.now() - t0);
+  await animate(res, ms);
+  typing.innerHTML = '<div class="who">ResolveAI <span class="src ' + (/gemini/i.test(res.ai_source) ? "ai" : "fb") + '">' + esc(res.ai_source) + '</span></div>' + esc(res.reply);
+  if (note) bubble("sys", note);
+  if (res.route === "escalate") bubble("sys", "🧑‍💼 Handed off to a human agent with full context");
+  log.unshift({ ...res, ms, message });
+  renderStats(); renderLog(); if (res.escalation) addQueue(res);
+  busy = false; $("send").disabled = false; $("msg").focus();
+}
+
+async function animate(r, ms){
+  const isAI = /gemini/i.test(r.ai_source);
+  const conf = Math.round((Number(r.confidence) || 0) * 100);
+  // 1 Understand
+  $("b1").innerHTML = '<div class="chips"><span class="kv">Intent <b>' + esc(r.intent) + '</b></span><span class="kv">Sentiment <b>' + esc(r.sentiment)
+    + '</b></span><span class="kv">Urgency <b>' + esc(r.urgency) + '</b></span><span class="src ' + (isAI ? "ai" : "fb") + '">' + esc(r.ai_source) + '</span></div>'
+    + '<div class="conf"><i id="confBar"></i></div><div style="font-size:11px;margin-top:4px">Confidence ' + conf + '%</div>';
+  requestAnimationFrame(() => { const b = $("confBar"); if (b) b.style.width = conf + "%"; });
+  $("st1").className = "stage done"; $("st2").classList.add("run"); await sleep(380);
+  // 2 Investigate
+  $("b2").innerHTML = r.order
+    ? '<div class="order"><span class="n">#' + esc(r.order_id) + ' · ' + esc(r.order.item) + '</span><span class="a">Rs.' + esc(r.order.amount) + '</span><span>' + esc(r.order.customer) + '</span><span style="text-align:right">' + esc(r.order.status) + '</span></div>'
+    : '<div class="chips"><span class="kv">' + (r.order_id ? "Order #" + esc(r.order_id) + " <b>not found</b>" : "<b>No order ID</b> in message") + '</span></div>';
+  $("st2").className = "stage done"; $("st3").classList.add("run"); await sleep(380);
+  // 3 Decide
+  const rule = r.route === "escalate" ? (r.escalation?.reason || "Needs human") : r.route === "refund" ? "Refund within auto-approval limit" : "Known order + high confidence";
+  $("b3").innerHTML = '<div class="chips"><span class="kv">Rule <b>' + esc(rule) + '</b></span></div>';
+  $("st3").className = "stage done"; $("st4").classList.add("run"); await sleep(380);
+  // 4 Act
+  const esc_ = r.route === "escalate";
+  $("b4").innerHTML = '<div class="outcome ' + (esc_ ? "warn" : "ok") + '"><div class="h">' + (esc_ ? "Escalated to human" : "Resolved automatically") + '</div>' + esc(r.action) + '</div>';
+  $("st4").className = "stage done" + (esc_ ? " esc" : "");
+  $("pipeMeta").textContent = esc(r.ticket_id) + " · " + (ms / 1000).toFixed(1) + " s";
+}
+
+function addQueue(r){
+  $("qEmpty")?.remove();
+  const d = document.createElement("div"); d.className = "qi";
+  d.innerHTML = '<div class="top"><span class="prio ' + (r.urgency === "high" ? "high" : "low") + '">' + (r.urgency === "high" ? "HIGH" : "REVIEW") + '</span><span class="id mono">' + esc(r.ticket_id) + '</span></div>'
+    + '<div class="sum">' + esc(r.escalation.summary) + '</div>'
+    + '<div class="why">⚑ ' + esc(r.escalation.reason) + '</div>'
+    + '<div class="sug"><b>Suggested reply:</b> ' + esc(r.escalation.suggested_reply) + '</div>';
+  $("queue").prepend(d);
+  $("qCount").textContent = $("queue").querySelectorAll(".qi").length + " waiting";
+}
+
+function renderStats(){
+  const auto = log.filter(t => t.route !== "escalate").length;
+  $("kTotal").textContent = log.length;
+  $("kAuto").textContent = Math.round(auto / log.length * 100) + "%";
+  $("kEsc").textContent = log.length - auto;
+  $("kTime").textContent = (log.reduce((a, t) => a + t.ms, 0) / log.length / 1000).toFixed(1) + "s";
+}
+
+function renderLog(){
+  const label = { status: "Auto · status", refund: "Auto · refund", escalate: "Escalated" };
+  $("logBody").innerHTML = log.map(t => '<tr><td class="mono">' + esc(t.ticket_id) + '</td><td class="m">' + esc(t.message) + '</td><td>' + esc(t.intent)
+    + '</td><td>' + esc(t.sentiment) + '</td><td><span class="src ' + (/gemini/i.test(t.ai_source) ? "ai" : "fb") + '">' + esc(t.ai_source) + '</span></td><td><span class="badge '
+    + esc(t.route) + '">' + (label[t.route] || esc(t.route)) + '</span></td><td class="mono">' + t.ms + ' ms</td></tr>').join("");
+}
+</script>
+</body>
+</html>
