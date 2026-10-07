@@ -1,0 +1,218 @@
+{
+  "name": "ResolveAI - Autonomous Customer Support",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "support",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "fef18044-8744-4dce-8768-1b8597c38ecf",
+      "name": "Customer Message",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        300
+      ],
+      "webhookId": "662ff286-573a-4365-9ff8-ee92cb68ef88"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-goog-api-key",
+              "value": "PASTE_YOUR_GEMINI_API_KEY"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ contents: [{ parts: [{ text: \"You are a customer support triage AI for an online store. Analyse the customer message and return ONLY JSON with keys: intent (one of status, refund, complaint, other), order_id (4 digit string or null), sentiment (calm or angry), urgency (low or high), confidence (number 0 to 1), summary (one sentence for a human agent). Do not invent facts. Customer message: \" + (typeof $json.body === 'string' ? JSON.parse($json.body).message : $json.body.message) }] }], generationConfig: { responseMimeType: 'application/json', temperature: 0 } }) }}",
+        "options": {
+          "timeout": 6000
+        }
+      },
+      "id": "0cc665f9-47ae-466f-80f2-d7cbe64606b0",
+      "name": "1. AI Understand (Gemini)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        240,
+        300
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ===== ResolveAI core logic: Understand -> Investigate -> Decide =====\nconst ORDERS = {\n  \"1021\": { customer: \"Ravi Kumar\",   item: \"Bluetooth Headphones\", amount: 1499, status: \"Delivered\", date: \"2026-10-02\" },\n  \"1022\": { customer: \"Anjali Reddy\", item: \"Phone Case\",           amount: 299,  status: \"Delivered\", date: \"2026-10-03\" },\n  \"1023\": { customer: \"Sai Teja\",     item: \"Smart Watch\",          amount: 2999, status: \"Shipped - arriving 9 Oct\", date: \"2026-10-04\" },\n  \"1024\": { customer: \"Meena Devi\",   item: \"USB-C Cable\",          amount: 249,  status: \"Delivered\", date: \"2026-10-01\" },\n  \"1025\": { customer: \"Kiran Babu\",   item: \"Laptop Stand\",         amount: 899,  status: \"Delayed - courier issue\", date: \"2026-09-28\" },\n  \"1026\": { customer: \"Lakshmi P\",    item: \"Water Bottle\",         amount: 399,  status: \"Processing\", date: \"2026-10-06\" }\n};\nconst REFUND_LIMIT = 500;   // AI may auto-approve refunds up to this amount\nconst MIN_CONFIDENCE = 0.7;\n\nfunction ruleClassify(msg) {\n  const m = msg.toLowerCase();\n  const idMatch = msg.match(/(\\d{4})/);\n  let intent = \"other\";\n  if (/(refund|money back|return|damaged|broken|defective)/.test(m)) intent = \"refund\";\n  else if (/(where|status|track|when will|deliver|arrive)/.test(m)) intent = \"status\";\n  else if (/(complain|worst|bad service|cheat)/.test(m)) intent = \"complaint\";\n  const angry = /(worst|angry|ridiculous|useless|terrible|cheat|fraud|never again|!!)/.test(m) || (msg.replace(/[^A-Z]/g, \"\").length > 15);\n  return {\n    intent, order_id: idMatch ? idMatch[1] : null,\n    sentiment: angry ? \"angry\" : \"calm\",\n    urgency: angry ? \"high\" : \"low\",\n    confidence: intent === \"other\" ? 0.4 : 0.85,\n    summary: msg.slice(0, 140)\n  };\n}\n\nfunction decide(message, ai) {\n  const oid = ai.order_id ? String(ai.order_id).replace(/\\D/g, \"\") : null;\n  const order = oid ? ORDERS[oid] : null;\n  let route = \"escalate\", reply = \"\", action = \"\", reason = \"\";\n\n  if (ai.sentiment === \"angry\" || ai.urgency === \"high\") reason = \"Angry / urgent customer - needs human care\";\n  else if ((ai.confidence ?? 0) < MIN_CONFIDENCE) reason = \"Low AI confidence\";\n  else if (!order) reason = oid ? \"Order #\" + oid + \" not found\" : \"No order ID provided\";\n  else if (ai.intent === \"status\") {\n    route = \"status\"; action = \"Auto-replied with live order status\";\n    reply = \"Hi \" + order.customer + \", your order #\" + oid + \" (\" + order.item + \") is: \" + order.status + \".\";\n  } else if (ai.intent === \"refund\") {\n    if (order.amount <= REFUND_LIMIT && order.status === \"Delivered\") {\n      route = \"refund\"; action = \"Refund of Rs.\" + order.amount + \" auto-approved (within Rs.\" + REFUND_LIMIT + \" limit)\";\n      reply = \"Hi \" + order.customer + \", sorry about your \" + order.item + \". A refund of Rs.\" + order.amount + \" for order #\" + oid + \" is approved and will reach you in 3-5 days.\";\n    } else reason = \"Refund Rs.\" + order.amount + \" exceeds auto-approval limit or item not delivered\";\n  } else reason = \"Intent '\" + ai.intent + \"' needs a human\";\n\n  if (route === \"escalate\") {\n    action = \"Escalated to human agent\";\n    reply = \"Thanks for reaching out. Your request has been prioritised and a support specialist will contact you shortly.\";\n  }\n  return {\n    ticket_id: \"TKT-\" + Date.now().toString().slice(-6),\n    route, intent: ai.intent, sentiment: ai.sentiment, urgency: ai.urgency, confidence: ai.confidence,\n    order_id: oid, order: order || null, reply, action,\n    escalation: route === \"escalate\" ? {\n      reason, summary: ai.summary,\n      suggested_reply: order ? \"Apologise, confirm order #\" + oid + \" (\" + order.item + \", \" + order.status + \"), offer a resolution.\" : \"Apologise and ask for the order ID.\"\n    } : null,\n    ai_source: ai.source\n  };\n}\n\nconst raw = $('Customer Message').first().json.body;\nconst req = typeof raw === 'string' ? JSON.parse(raw) : (raw || {});\nconst message = req.message || '';\nlet ai;\ntry {\n  const text = $input.first().json.candidates[0].content.parts[0].text;\n  ai = JSON.parse(text.replace(/```json|```/g, '').trim());\n  ai.source = 'Gemini AI';\n} catch (e) {\n  ai = ruleClassify(message);\n  ai.source = 'Rule-based fallback (AI unavailable)';\n}\nconst out = decide(message, ai);\nout.customer_message = message;\nout.email = req.email || '';\nreturn [{ json: out }];\n"
+      },
+      "id": "fa38773c-8bf1-49dc-87ba-be926db770c2",
+      "name": "2-3. Investigate & Decide",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "expression",
+        "numberOutputs": 3,
+        "output": "={{ ({ status: 0, refund: 1, escalate: 2 })[$json.route] }}"
+      },
+      "id": "0b723b58-6dfa-4124-acfb-0b483cdfad9d",
+      "name": "Route",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        720,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              }
+            ]
+          }
+        }
+      },
+      "id": "f7747bcf-f1c6-4c6f-af60-310111c4cea4",
+      "name": "4a. Auto-Reply: Order Status",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        980,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              }
+            ]
+          }
+        }
+      },
+      "id": "34d3cbc0-7325-4a8d-a7d2-564543eaa023",
+      "name": "4b. Auto-Approve Refund",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        980,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              }
+            ]
+          }
+        }
+      },
+      "id": "1ca913b2-4234-4efe-963c-256d07e91906",
+      "name": "4c. Escalate to Human",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        980,
+        480
+      ]
+    }
+  ],
+  "connections": {
+    "Customer Message": {
+      "main": [
+        [
+          {
+            "node": "1. AI Understand (Gemini)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "1. AI Understand (Gemini)": {
+      "main": [
+        [
+          {
+            "node": "2-3. Investigate & Decide",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "2-3. Investigate & Decide": {
+      "main": [
+        [
+          {
+            "node": "Route",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route": {
+      "main": [
+        [
+          {
+            "node": "4a. Auto-Reply: Order Status",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "4b. Auto-Approve Refund",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "4c. Escalate to Human",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}
