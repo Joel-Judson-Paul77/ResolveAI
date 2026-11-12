@@ -1,5 +1,7 @@
 # ResolveAI: Autonomous Customer Support
 
+It is deployed and working live in : https://resolveai-gilt-six.vercel.app/
+
 **Ticket in, resolution out. A human only when needed.**
 
 Prototype for the *Legacy to Modern Challenge*, PS 2 (Customer Support → Autonomous AI Support), TechTatva 2K26.
